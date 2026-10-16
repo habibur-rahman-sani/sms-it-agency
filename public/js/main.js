@@ -98,6 +98,7 @@
 
   /* ---------- সার্ভিস ---------- */
   var list = $("#serviceList"), fs = $("#footerServices");
+  list.textContent = "";
   (S.services || []).forEach(function (sv) {
     var ic = h("span", { "class": "service__icon" }); ic.appendChild(icon(sv.icon));
     var cta = h("a", { href: "#contact", "data-contact": "service", "data-msg": sv.message || "", text: "WhatsApp-এ জানুন" });
