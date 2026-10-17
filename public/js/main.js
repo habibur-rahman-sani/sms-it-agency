@@ -256,14 +256,14 @@
   var navEnd = $(".nav__wa-mobile"), fq = $(".footer__col");
   D.pages.forEach(function (pg) {
     if (!pg.inNav) return;
-    var href = "#/p/" + encodeURIComponent(pg.slug);
+    var href = "/p/" + encodeURIComponent(pg.slug);
     menu.insertBefore(h("a", { href: href, text: pg.title }), navEnd);
     fq.appendChild(h("a", { href: href, text: pg.title }));
   });
   $$("a", menu).forEach(function (a) { a.addEventListener("click", closeMenu); });
   function renderPage(pg) {
     pb.textContent = "";
-    pb.appendChild(h("a", { "class": "page__back", href: "#home", text: "← হোমে ফিরুন" }));
+    pb.appendChild(h("a", { "class": "page__back", href: "/", text: "← হোমে ফিরুন" }));
     pb.appendChild(h("h1", { text: pg.title }));
     String(pg.content || "").split(/\n\s*\n/).forEach(function (blk) {
       var box = h("div", { "class": "page__blk" });
@@ -278,7 +278,7 @@
     });
   }
   function route() {
-    var m = /^#\/p\/(.+)$/.exec(location.hash), pg = null;
+    var m = /^\/p\/([^\/]+)\/?$/.exec(location.pathname) || /^#\/p\/(.+)$/.exec(location.hash), pg = null;
     if (m) { var slug = decodeURIComponent(m[1]); pg = D.pages.filter(function (x) { return x.slug === slug; })[0] || null; }
     pv.hidden = !pg;
     homeSecs.forEach(function (s) { if (pg) s.setAttribute("data-hidden", "true"); else s.removeAttribute("data-hidden"); });

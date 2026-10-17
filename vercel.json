@@ -1,7 +1,30 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/admin", "destination": "/admin/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/p/:slug",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/index"
+    }
   ],
-  "functions": { "api/index.js": { "maxDuration": 15 } }
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 15,
+      "includeFiles": "public/_home.html"
+    }
+  }
 }
