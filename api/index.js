@@ -192,6 +192,8 @@
 'use strict';
 // SMS IT Agency — Vercel ভার্সন: ডেটা Upstash Redis-এ, ছবি/ভিডিও Cloudinary-তে
 const crypto = require('crypto');
+const fs = require('fs'), path = require('path');
+const seo = require('../lib/seo');
 const PASS = process.env.ADMIN_PASSWORD || '';
 const SECRET = process.env.SECRET || crypto.createHash('sha256').update('sms-' + PASS).digest('hex');
 const R_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
@@ -212,7 +214,7 @@ async function load() {
   let db = {};
   COLS.forEach((c, i) => { if (vals[i] != null) db[c] = JSON.parse(vals[i]); });
   if (!db.settings) { // প্রথমবার: seed.json থেকে ভরা হবে
-    db = JSON.parse(JSON.stringify(require('../seed.json')));
+    db = JSON.parse(JSON.stringify(require('../sms-it-agency/seed.json')));
     COLS.forEach(c => db[c] = db[c] || (c === 'settings' ? {} : []));
     await save(db, COLS);
   }
@@ -299,6 +301,42 @@ async function api(req, res) {
   const u = new URL(req.url, 'http://x'), p = decodeURIComponent(u.pathname).replace(/\/+$/, '');
   const m = req.method, seg = p.split('/').filter(Boolean);
 
+  // হোমপেজ: _home.html-এ অ্যাডমিন প্যানেলের সার্ভিস/পোর্টফোলিও/স্কিমা বসিয়ে পাঠানো হয় (Google ও AI ক্রলারের জন্য)
+  if (p === '' && (m === 'GET' || m === 'HEAD')) {
+    let html;
+    try {
+      const raw = fs.readFileSync(path.join(__dirname, '..', 'public', '_home.html'), 'utf8');
+      try { html = seo.render(raw, publicData(await load())); }
+      catch (e) { console.error('SEO render failed', e); html = raw; }
+    } catch (e) {
+      console.error('home read failed', e);
+      res.statusCode = 302; res.setHeader('Location', '/_home.html'); return res.end();
+    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600');
+    return res.end(m === 'HEAD' ? undefined : html);
+  }
+  // আলাদা পেজ: /p/<slug> (Google আলাদা রেজাল্ট হিসেবে দেখাতে পারবে)
+  const pm = /^\/p\/([^\/]+)$/.exec(p);
+  if (pm && (m === 'GET' || m === 'HEAD')) {
+    const pub = publicData(await load()), page = seo.findPage(pub, pm[1]);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    if (!page) { res.statusCode = 404; res.setHeader('Cache-Control', 'no-store'); return res.end(m === 'HEAD' ? undefined : seo.notFoundHtml); }
+    const raw = fs.readFileSync(path.join(__dirname, '..', 'public', '_home.html'), 'utf8');
+    let html;
+    try { html = seo.renderPage(raw, pub, page); } catch (e) { console.error('page render failed', e); html = raw; }
+    res.statusCode = 200;
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600');
+    return res.end(m === 'HEAD' ? undefined : html);
+  }
+  // সাইটম্যাপ: হোম + অ্যাডমিনের সব চালু পেজ
+  if (p === '/sitemap.xml' && (m === 'GET' || m === 'HEAD')) {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    return res.end(m === 'HEAD' ? undefined : seo.sitemap(publicData(await load())));
+  }
   if (p === '/api/site' && m === 'GET') {
     const out = publicData(await load());
     res.setHeader('Cache-Control', 'no-store');
